@@ -4,5 +4,13 @@
 # de la licence CeCILL diffusée sur le site "http://www.cecill.info".
 
 fr:
-  template:
-    hello: "Bonjour Monde !"
+  nextink:
+    already_subscribed: "Ce salon est déjà abonné à #LeBrief par Next.ink"
+    not_subscribed: "Ce salon n'est pas abonné à #LeBrief par Next.ink"
+    subscribed: "Ce salon est maintenant abonné à #LeBrief par Next.ink"
+    unsubscribed: "Ce salon n'est plus abonné à #LeBrief par Next.ink"
+    list:
+      title: "Salons abonnés"
+      empty: "Aucun salon n'est abonné à #LeBrief par Next.ink sur ce serveur"
+    webhook:
+      reason: "Envoyer le message #LeBrief quotidien"

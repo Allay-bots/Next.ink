@@ -4,5 +4,14 @@
 # de la licence CeCILL diffusée sur le site "http://www.cecill.info".
 
 en:
-  template:
-    hello: "Hello World!"
+  nextink:
+    already_subscribed: "This channel is already subscribed to #LeBrief by Next.ink"
+    not_subscribed: "This channel is not subscribed to #LeBrief by Next.ink"
+    subscribed: "Successfully subscribed this channel to #LeBrief by Next.ink"
+    unsubscribed: "Successfully unsubscribed this channel from #LeBrief by Next.ink"
+    list:
+      title: "Subscribed channels"
+      empty: "No channel is subscribed to #LeBrief by Next.ink on this server"
+    webhook:
+      reason: "Send daily #LeBrief message"
+

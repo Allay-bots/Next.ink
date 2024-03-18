@@ -52,11 +52,21 @@ class NiCog(commands.Cog):
     )
     async def subscribe(self, ctx: discord.Interaction):
         if is_suscribed(ctx.guild.id, ctx.channel.id):
-            await ctx.response.send_message("This channel is already subscribed to Next.ink brief.")
+            await ctx.response.send_message(
+                allay.I18N.tr(
+                    ctx,
+                    "nextink.already_subscribed",
+                )
+            )
             return
         logs.info(f"Subscribing to Next.ink for {ctx.guild.id}")
         await add_suscribtion(ctx.guild.id, ctx.channel.id)
-        await ctx.response.send_message("Subscribed to Next.ink brief.")
+        await ctx.response.send_message(
+            allay.I18N.tr(
+                ctx,
+                "nextink.subscribed",
+            )
+        )
 
     @group.command(
         name="unsubscribe",
@@ -64,11 +74,21 @@ class NiCog(commands.Cog):
     )
     async def unsubscribe(self, ctx):
         if not is_suscribed(ctx.guild.id, ctx.channel.id):
-            await ctx.response.send_message("This channel is not subscribed to Next.ink brief.")
+            await ctx.response.send_message(
+                allay.I18N.tr(
+                    ctx,
+                    "nextink.not_subscribed",
+                )
+            )
             return
         logs.info(f"Unsubscribing from Next.ink for {ctx.guild.id}")
         await remove_suscribtion(ctx.guild.id, ctx.channel.id)
-        await ctx.response.send_message(f"Unsubscribed from Next.ink brief.")
+        await ctx.response.send_message(
+            allay.I18N.tr(
+                ctx,
+                "nextink.unsubscribed",
+            )
+        )
 
     @group.command(
         name="list",
@@ -77,37 +97,88 @@ class NiCog(commands.Cog):
     async def list(self, ctx):
         logs.info(f"Listing suscribtions for {ctx.guild.id}")
         suscribtions = await get_suscribtions(ctx.guild.id)
-        await ctx.send(f"Subscriptions: {suscribtions}")
+        if len(suscribtions) == 0:
+            await ctx.response.send_message(
+                allay.I18N.tr(
+                    ctx,
+                    "nextink.list.empty",
+                )
+            )
+            return
+        embed = discord.Embed(
+            title=allay.I18N.tr(
+                ctx,
+                "nextink.list.title",
+            ),
+            color=0x00FF00
+        )
+        for suscribtion in suscribtions:
+            channel = self.bot.get_channel(int(suscribtion["channel_id"]))
+            embed.add_field(
+                name="",
+                value=f"{channel.mention}",
+                inline=True
+            )
+        await ctx.response.send_message(embed=embed)
 
-    @tasks.loop(minutes=1)
+    @tasks.loop(minutes=30)
     async def check(self):
         logs.info("Checking Next.ink")
         feed = feedparser.parse("https://next.ink/feed/briefonly")
         last_run = datetime.fromtimestamp(await get_last_run(), timezone.utc)
+        embeds = []
         for entry in feed.entries:
             if datetime.fromtimestamp(mktime(entry.published_parsed), timezone.utc) < last_run:
                 continue
-            for suscribtion in await get_all_suscribtions():
-                print(suscribtion)
-                channel = self.bot.get_channel(int(suscribtion["channel_id"]))
-                if channel is None:
-                    logs.error(f"Channel {suscribtion['channel_id']} not found")
-                    await remove_suscribtion(suscribtion["guild_id"], suscribtion["channel_id"])
+
+            embed = discord.Embed(
+                title=entry.title,
+                type="article",
+                color=int(hashlib.sha1(entry.title.encode()).hexdigest(), 16) % 0xFFFFFF,
+                url=entry.link
+            )
+            embed.set_footer(
+                text="#LeBrief - Next.ink")
+
+            img_regex = r'\bhttps?://\S+?\.(?:jpg|png|gif)\b'
+            img = re.search(img_regex, entry.content[0].value, re.IGNORECASE)
+            if img:
+                embed.set_thumbnail(url=img.group(0))
+
+            embeds.append(embed)
+
+        if len(embeds) == 0:
+            return
+
+        messages = []
+        for embed in range(0, len(embeds), 10):
+            messages.append(embeds[embed:embed + 10])
+
+        suscribtions = await get_all_suscribtions()
+        for suscribtion in suscribtions:
+            channel = self.bot.get_channel(int(suscribtion["channel_id"]))
+            for message in messages:
+                # fallback if no webhook permission
+                if not channel.permissions_for(channel.guild.me).manage_webhooks:
+                    await channel.send(
+                        embeds=message
+                    )
                     continue
-                embed = discord.Embed(
-                    title=entry.title,
-                    type="article",
-                    color=int(hashlib.sha1(entry.title.encode()).hexdigest(), 16) % 0xFFFFFF,
-                    url=entry.link
+
+                webhook = await channel.create_webhook(
+                    name="#LeBrief - Next.ink",
+                    reason=allay.I18N.tr(
+                        channel,
+                        "nextink.webhook.reason",
+                    )
                 )
-                embed.set_footer(text="#LeBrief by Next.ink")
+                await webhook.send(
+                    avatar_url=feed.feed.image.href,
+                    embeds=message,
+                    wait=True
+                )
+                await webhook.delete()
 
-                img_regex = r'\bhttps?://\S+?\.(?:jpg|png|gif)\b'
-                img = re.search(img_regex, entry.content[0].value, re.IGNORECASE)
-                if img:
-                    embed.set_thumbnail(url=img.group(0))
-
-                await channel.send(embed=embed)
         await set_last_run(int(datetime.now().timestamp()))
 
     @check.before_loop
@@ -116,17 +187,16 @@ class NiCog(commands.Cog):
 
     async def cog_load(self):
         """Start the scheduler on cog load"""
-        self.check.start() # pylint: disable=no-member
+        self.check.start()  # pylint: disable=no-member
 
     async def cog_unload(self):
         """Stop the scheduler on cog unload"""
-        self.check.stop() # pylint: disable=no-member
+        self.check.stop()  # pylint: disable=no-member
 
 
 # Database
 # --------
 async def get_suscribtions(guild_id: int):
-    logs.info(f"Getting suscribtions for {guild_id}")
     result = allay.Database.query(
         "SELECT * FROM nextink_subscriptions WHERE guild_id = ?",
         (guild_id,)
@@ -135,7 +205,6 @@ async def get_suscribtions(guild_id: int):
 
 
 async def get_all_suscribtions():
-    logs.info(f"Getting all suscribtions")
     result = allay.Database.query(
         "SELECT * FROM nextink_subscriptions"
     )
@@ -143,7 +212,6 @@ async def get_all_suscribtions():
 
 
 def is_suscribed(guild_id: int, channel_id: int):
-    logs.info(f"Checking suscribtion for {guild_id}")
     result = allay.Database.query(
         "SELECT * FROM nextink_subscriptions WHERE guild_id = ? AND channel_id = ?",
         (guild_id, channel_id)
@@ -168,7 +236,6 @@ async def remove_suscribtion(guild_id: int, channel_id: int):
 
 
 async def get_last_run() -> int:
-    logs.info(f"Getting 'last_run' system key")
     result = allay.Database.query(
         "SELECT value FROM nextink_system WHERE key = 'last_run'"
     )
