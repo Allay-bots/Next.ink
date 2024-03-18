@@ -138,7 +138,8 @@ class NiCog(commands.Cog):
                 url=entry.link
             )
             embed.set_footer(
-                text="#LeBrief - Next.ink")
+                text="#LeBrief - Next.ink"
+            )
 
             img_regex = r'\bhttps?://\S+?\.(?:jpg|png|gif)\b'
             img = re.search(img_regex, entry.content[0].value, re.IGNORECASE)
@@ -150,34 +151,31 @@ class NiCog(commands.Cog):
         if len(embeds) == 0:
             return
 
-        messages = []
-        for embed in range(0, len(embeds), 10):
-            messages.append(embeds[embed:embed + 10])
-
         suscribtions = await get_all_suscribtions()
         for suscribtion in suscribtions:
             channel = self.bot.get_channel(int(suscribtion["channel_id"]))
-            for message in messages:
-                # fallback if no webhook permission
-                if not channel.permissions_for(channel.guild.me).manage_webhooks:
+            # fallback if no webhook permission
+            if not channel.permissions_for(channel.guild.me).manage_webhooks:
+                for embed in embeds:
                     await channel.send(
-                        embeds=message
+                        embeds=embed
                     )
-                    continue
+                continue
 
-                webhook = await channel.create_webhook(
-                    name="#LeBrief - Next.ink",
-                    reason=allay.I18N.tr(
-                        channel,
-                        "nextink.webhook.reason",
-                    )
+            webhook = await channel.create_webhook(
+                name="#LeBrief - Next.ink",
+                reason=allay.I18N.tr(
+                    channel,
+                    "nextink.webhook.reason",
                 )
+            )
+            for embed in embeds:
                 await webhook.send(
                     avatar_url=feed.feed.image.href,
-                    embeds=message,
-                    wait=True
+                    embed=embed,
+                    silent=True
                 )
-                await webhook.delete()
+            await webhook.delete()
 
         await set_last_run(int(datetime.now().timestamp()))
 
