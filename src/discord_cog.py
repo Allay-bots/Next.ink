@@ -158,7 +158,7 @@ class NiCog(commands.Cog):
             if not channel.permissions_for(channel.guild.me).manage_webhooks:
                 for embed in embeds:
                     await channel.send(
-                        embeds=embed
+                        embed=embed
                     )
                 continue
 
