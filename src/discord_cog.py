@@ -5,18 +5,17 @@ utiliser, modifier et/ou redistribuer ce programme sous les conditions
 de la licence CeCILL diffusée sur le site "http://www.cecill.info".
 """
 
+import hashlib
+import re
 # Requirements
 # ------------
 # - Python 3.12
 # Standard libraries
 from datetime import datetime, time, timezone
 from time import mktime
-import hashlib
-import re
 
 # Project modules
 import allay
-
 # External libraries
 import discord
 import feedparser
@@ -24,15 +23,17 @@ from LRFutils import logs
 from discord.ext import commands, tasks
 
 
+# Constants
+# ---------
+
+class SILENT:
+    ALL = 2
+    FIRST = 1
+    NONE = 0
+
+
 # Cog
 # ---
-
-async def remove_subscription(id: int):
-    logs.info(f"Removing suscribtion {id}")
-    allay.Database.query(
-        "DELETE FROM next_ink WHERE id = ?",
-        (id,)
-    )
 
 
 class NiCog(commands.Cog):
@@ -43,15 +44,24 @@ class NiCog(commands.Cog):
         name="next",
         description="Next.ink",
         default_permissions=discord.Permissions(manage_guild=True),
-        guild_only=True
+        guild_only=True,
     )
 
     @group.command(
         name="subscribe",
         description="Subscribe to Next.ink brief",
     )
-    async def subscribe(self, ctx: discord.Interaction):
-        if is_suscribed(ctx.guild.id, ctx.channel.id):
+    @discord.app_commands.describe(silent="Should the brief be sent as silent messages ?")
+    @discord.app_commands.choices(
+        silent=[
+            discord.app_commands.Choice(name="Send all messages as silent", value=SILENT.NONE),
+            discord.app_commands.Choice(name="Send only first message with notification", value=SILENT.FIRST),
+            discord.app_commands.Choice(name="Send all messages with notification", value=SILENT.ALL)
+        ]
+    )
+    async def subscribe(self, ctx: discord.Interaction, silent: discord.app_commands.Choice[int]):
+
+        if is_subscribed(ctx.guild.id, ctx.channel.id):
             await ctx.response.send_message(
                 allay.I18N.tr(
                     ctx,
@@ -59,8 +69,7 @@ class NiCog(commands.Cog):
                 )
             )
             return
-        logs.info(f"Next.ink - Subscribing {ctx.guild.id} - {ctx.channel.id}")
-        await add_suscribtion(ctx.guild.id, ctx.channel.id)
+        await add_subscription(ctx.guild.id, ctx.channel.id, silent.value)
         await ctx.response.send_message(
             allay.I18N.tr(
                 ctx,
@@ -73,7 +82,7 @@ class NiCog(commands.Cog):
         description="Unsubscribe from Next.ink brief",
     )
     async def unsubscribe(self, ctx):
-        if not is_suscribed(ctx.guild.id, ctx.channel.id):
+        if not is_subscribed(ctx.guild.id, ctx.channel.id):
             await ctx.response.send_message(
                 allay.I18N.tr(
                     ctx,
@@ -81,8 +90,7 @@ class NiCog(commands.Cog):
                 )
             )
             return
-        logs.info(f"Next.ink - Unsubscribing {ctx.guild.id} - {ctx.channel.id}")
-        await remove_suscribtion(ctx.guild.id, ctx.channel.id)
+        await remove_subscription(ctx.guild.id, ctx.channel.id)
         await ctx.response.send_message(
             allay.I18N.tr(
                 ctx,
@@ -95,8 +103,8 @@ class NiCog(commands.Cog):
         description="List subscriptions",
     )
     async def list(self, ctx):
-        suscribtions = await get_suscribtions(ctx.guild.id)
-        if len(suscribtions) == 0:
+        subscriptions = await get_subscriptions(ctx.guild.id)
+        if len(subscriptions) == 0:
             await ctx.response.send_message(
                 allay.I18N.tr(
                     ctx,
@@ -111,11 +119,18 @@ class NiCog(commands.Cog):
             ),
             color=0x00FF00
         )
-        for suscribtion in suscribtions:
-            channel = self.bot.get_channel(int(suscribtion["channel_id"]))
+        for subscription in subscriptions:
+            channel = self.bot.get_channel(int(subscription["channel_id"]))
+            silence_mode = await get_silence_mode(ctx.guild.id, subscription["channel_id"])
+            if silence_mode == SILENT.NONE:
+                silence_mode = allay.I18N.tr(ctx, "nextink.notifications.none")
+            elif silence_mode == SILENT.FIRST:
+                silence_mode = allay.I18N.tr(ctx, "nextink.notifications.first")
+            elif silence_mode == SILENT.ALL:
+                silence_mode = allay.I18N.tr(ctx, "nextink.notifications.all")
             embed.add_field(
-                name="",
-                value=f"{channel.mention}",
+                name=f"{channel.mention}",
+                value=silence_mode,
                 inline=True
             )
         await ctx.response.send_message(embed=embed)
@@ -150,17 +165,25 @@ class NiCog(commands.Cog):
             embeds.append(embed)
 
         if len(embeds) == 0:
+            await set_last_run(int(datetime.now().timestamp()))
             return
 
-        suscribtions = await get_all_suscribtions()
-        for suscribtion in suscribtions:
-            channel = self.bot.get_channel(int(suscribtion["channel_id"]))
+        subscriptions = await get_all_subscriptions()
+        print(subscriptions)
+        for subscription in subscriptions:
+            silence_mode = await get_silence_mode(subscription["guild_id"], subscription["channel_id"])
+            silence = True if (silence_mode == SILENT.ALL) else False
+
+            channel = self.bot.get_channel(int(subscription["channel_id"]))
             # fallback if no webhook permission
             if not channel.permissions_for(channel.guild.me).manage_webhooks:
                 for embed in embeds:
                     await channel.send(
-                        embed=embed
+                        embed=embed,
+                        silent=silence
                     )
+                    if silence_mode == SILENT.FIRST:
+                        silence = True
                 continue
 
             webhook = await channel.create_webhook(
@@ -171,11 +194,14 @@ class NiCog(commands.Cog):
                 )
             )
             for embed in embeds:
+                print(silence)
                 await webhook.send(
                     avatar_url=feed.feed.image.href,
                     embed=embed,
-                    silent=True
+                    silent=silence
                 )
+                if silence_mode == SILENT.FIRST:
+                    silence = True
             await webhook.delete()
 
         await set_last_run(int(datetime.now().timestamp()))
@@ -186,6 +212,9 @@ class NiCog(commands.Cog):
 
     async def cog_load(self):
         """Start the scheduler on cog load"""
+        # Avoid spam on first loop
+        if await get_last_run() == 0:
+            await set_last_run(int(datetime.now().timestamp()))
         self.check.start()
 
     async def cog_unload(self):
@@ -195,7 +224,7 @@ class NiCog(commands.Cog):
 
 # Database
 # --------
-async def get_suscribtions(guild_id: int):
+async def get_subscriptions(guild_id: int):
     result = allay.Database.query(
         "SELECT * FROM nextink_subscriptions WHERE guild_id = ?",
         (guild_id,)
@@ -203,14 +232,23 @@ async def get_suscribtions(guild_id: int):
     return result
 
 
-async def get_all_suscribtions():
+async def get_all_subscriptions():
     result = allay.Database.query(
         "SELECT * FROM nextink_subscriptions"
     )
     return result
 
 
-def is_suscribed(guild_id: int, channel_id: int):
+async def get_silence_mode(guild_id: int, channel_id: int):
+    result = allay.Database.query(
+        "SELECT silent FROM nextink_subscriptions WHERE guild_id = ? AND channel_id = ?",
+        (guild_id, channel_id)
+    )
+    print(result[0]["silent"] if len(result) == 1 else SILENT.NONE)
+    return result[0]["silent"] if len(result) == 1 else SILENT.NONE
+
+
+def is_subscribed(guild_id: int, channel_id: int):
     result = allay.Database.query(
         "SELECT * FROM nextink_subscriptions WHERE guild_id = ? AND channel_id = ?",
         (guild_id, channel_id)
@@ -218,16 +256,16 @@ def is_suscribed(guild_id: int, channel_id: int):
     return len(result) == 1
 
 
-async def add_suscribtion(guild_id: int, channel_id: int):
-    logs.info(f"Next.ink - Adding suscribtion for {guild_id}")
+async def add_subscription(guild_id: int, channel_id: int, silent=SILENT.NONE):
+    logs.info(f"Next.ink - Adding subscription for {guild_id}")
     allay.Database.query(
-        "INSERT INTO nextink_subscriptions (guild_id, channel_id) VALUES (?, ?)",
-        (guild_id, channel_id)
+        "INSERT INTO nextink_subscriptions (guild_id, channel_id, silent) VALUES (?, ?, ?)",
+        (guild_id, channel_id, silent)
     )
 
 
-async def remove_suscribtion(guild_id: int, channel_id: int):
-    logs.info(f"Next.ink - Removing suscribtion for {guild_id}")
+async def remove_subscription(guild_id: int, channel_id: int):
+    logs.info(f"Next.ink - Removing subscription for {guild_id}")
     allay.Database.query(
         "DELETE FROM nextink_subscriptions WHERE guild_id = ? AND channel_id = ?",
         (guild_id, channel_id)

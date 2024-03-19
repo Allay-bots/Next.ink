@@ -14,3 +14,7 @@ fr:
       empty: "Aucun salon n'est abonné à #LeBrief par Next.ink sur ce serveur"
     webhook:
       reason: "Envoyer le message #LeBrief quotidien"
+    notifications:
+      all: "**Messages** : non silencieux"
+      first: "**Messages** : premier silencieux"
+      none: "**Messages** : tous silencieux"

@@ -1,6 +1,7 @@
 CREATE TABLE IF NOT EXISTS 'nextink_subscriptions' (
     'guild_id' varchar(255) NOT NULL,
     'channel_id' varchar(255) NOT NULL,
+    'silent' int(2) NOT NULL DEFAULT 0,
     PRIMARY KEY ('guild_id', 'channel_id')
 );
 CREATE INDEX IF NOT EXISTS 'guild_id' ON 'nextink_subscriptions' ('guild_id', 'channel_id');

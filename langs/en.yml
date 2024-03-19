@@ -14,4 +14,8 @@ en:
       empty: "No channel is subscribed to #LeBrief by Next.ink on this server"
     webhook:
       reason: "Send daily #LeBrief message"
+    notifications:
+      all: "**Messages** : non-silent"
+      first: "**Messages** : first is silent"
+      none: "**Messages** : silent"
 
