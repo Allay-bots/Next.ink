@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 from time import mktime
 import hashlib
 import re
+import asyncio
 
 # External libraries
 import discord
@@ -120,7 +121,7 @@ class NiCog(commands.Cog):
             )
         await ctx.response.send_message(embed=embed)
 
-    @tasks.loop(minutes=30)
+    @tasks.loop(minutes=60)
     async def check(self):
         logs.info("Next.ink - Checking the feed")
         feed = feedparser.parse("https://next.ink/feed/briefonly")
@@ -184,6 +185,7 @@ class NiCog(commands.Cog):
 
     async def cog_load(self):
         """Start the scheduler on cog load"""
+        await wait_until_hour()
         self.check.start()  # pylint: disable=no-member
 
     async def cog_unload(self):
@@ -245,3 +247,11 @@ async def set_last_run(value: int):
         "UPDATE nextink_system SET value = ? WHERE key = 'last_run'",
         (value,)
     )
+
+
+async def wait_until_hour():
+    logs.info("Next.ink - Waiting until the next hour")
+    now = datetime.now()
+    if now.minute == 0:
+        return
+    await asyncio.sleep((60 - now.minute) * 60)
