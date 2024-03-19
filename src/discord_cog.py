@@ -185,12 +185,17 @@ class NiCog(commands.Cog):
 
     async def cog_load(self):
         """Start the scheduler on cog load"""
+        await asyncio.create_task(self.start_loop())
+
+    async def start_loop(self):
+        """Start the scheduler"""
         await wait_until_hour()
-        self.check.start()  # pylint: disable=no-member
+        self.check.start()
 
     async def cog_unload(self):
         """Stop the scheduler on cog unload"""
         self.check.stop()  # pylint: disable=no-member
+
 
 
 # Database
@@ -254,4 +259,4 @@ async def wait_until_hour():
     now = datetime.now()
     if now.minute == 0:
         return
-    await asyncio.sleep((60 - now.minute) * 60)
+    await asyncio.sleep((3600 - now.minute * 60 - now.second) + 1)
