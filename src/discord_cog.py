@@ -9,20 +9,19 @@ de la licence CeCILL diffusée sur le site "http://www.cecill.info".
 # ------------
 # - Python 3.12
 # Standard libraries
-from datetime import datetime, timezone
+from datetime import datetime, time, timezone
 from time import mktime
 import hashlib
 import re
-import asyncio
-
-# External libraries
-import discord
-from discord.ext import commands, tasks
-from LRFutils import logs
-import feedparser
 
 # Project modules
 import allay
+
+# External libraries
+import discord
+import feedparser
+from LRFutils import logs
+from discord.ext import commands, tasks
 
 
 # Cog
@@ -121,8 +120,10 @@ class NiCog(commands.Cog):
             )
         await ctx.response.send_message(embed=embed)
 
-    async def perform_check(self):
-        await self.bot.wait_until_ready()
+    time = [time(hour=x, minute=0) for x in range(0, 24)]
+
+    @tasks.loop(time=time)
+    async def check(self):
         logs.info("Next.ink - Checking the feed")
         feed = feedparser.parse("https://next.ink/feed/briefonly")
         last_run = datetime.fromtimestamp(await get_last_run(), timezone.utc)
@@ -179,23 +180,17 @@ class NiCog(commands.Cog):
 
         await set_last_run(int(datetime.now().timestamp()))
 
-    @tasks.loop(minutes=60)
-    async def check(self):
-        await asyncio.create_task(self.perform_check())
+    @check.before_loop
+    async def before_check(self):
+        await self.bot.wait_until_ready()
 
     async def cog_load(self):
         """Start the scheduler on cog load"""
-        await asyncio.create_task(self.start_loop())
-
-    async def start_loop(self):
-        """Start the scheduler"""
-        await wait_until_hour()
         self.check.start()
 
     async def cog_unload(self):
         """Stop the scheduler on cog unload"""
         self.check.stop()  # pylint: disable=no-member
-
 
 
 # Database
@@ -252,11 +247,3 @@ async def set_last_run(value: int):
         "UPDATE nextink_system SET value = ? WHERE key = 'last_run'",
         (value,)
     )
-
-
-async def wait_until_hour():
-    logs.info("Next.ink - Waiting until the next hour")
-    now = datetime.now()
-    if now.minute == 0:
-        return
-    await asyncio.sleep((3600 - now.minute * 60 - now.second) + 1)
