@@ -121,8 +121,8 @@ class NiCog(commands.Cog):
             )
         await ctx.response.send_message(embed=embed)
 
-    @tasks.loop(minutes=60)
-    async def check(self):
+    async def perform_check(self):
+        await self.bot.wait_until_ready()
         logs.info("Next.ink - Checking the feed")
         feed = feedparser.parse("https://next.ink/feed/briefonly")
         last_run = datetime.fromtimestamp(await get_last_run(), timezone.utc)
@@ -179,9 +179,9 @@ class NiCog(commands.Cog):
 
         await set_last_run(int(datetime.now().timestamp()))
 
-    @check.before_loop
-    async def before_check(self):
-        await self.bot.wait_until_ready()
+    @tasks.loop(minutes=60)
+    async def check(self):
+        await asyncio.create_task(self.perform_check())
 
     async def cog_load(self):
         """Start the scheduler on cog load"""
