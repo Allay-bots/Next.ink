@@ -59,7 +59,7 @@ class NiCog(commands.Cog):
                 )
             )
             return
-        logs.info(f"Subscribing to Next.ink for {ctx.guild.id}")
+        logs.info(f"Next.ink - Subscribing {ctx.guild.id} - {ctx.channel.id}")
         await add_suscribtion(ctx.guild.id, ctx.channel.id)
         await ctx.response.send_message(
             allay.I18N.tr(
@@ -81,7 +81,7 @@ class NiCog(commands.Cog):
                 )
             )
             return
-        logs.info(f"Unsubscribing from Next.ink for {ctx.guild.id}")
+        logs.info(f"Next.ink - Unsubscribing {ctx.guild.id} - {ctx.channel.id}")
         await remove_suscribtion(ctx.guild.id, ctx.channel.id)
         await ctx.response.send_message(
             allay.I18N.tr(
@@ -95,7 +95,6 @@ class NiCog(commands.Cog):
         description="List subscriptions",
     )
     async def list(self, ctx):
-        logs.info(f"Listing suscribtions for {ctx.guild.id}")
         suscribtions = await get_suscribtions(ctx.guild.id)
         if len(suscribtions) == 0:
             await ctx.response.send_message(
@@ -123,7 +122,7 @@ class NiCog(commands.Cog):
 
     @tasks.loop(minutes=30)
     async def check(self):
-        logs.info("Checking Next.ink")
+        logs.info("Next.ink - Checking the feed")
         feed = feedparser.parse("https://next.ink/feed/briefonly")
         last_run = datetime.fromtimestamp(await get_last_run(), timezone.utc)
         embeds = []
@@ -218,7 +217,7 @@ def is_suscribed(guild_id: int, channel_id: int):
 
 
 async def add_suscribtion(guild_id: int, channel_id: int):
-    logs.info(f"Adding suscribtion for {guild_id}")
+    logs.info(f"Next.ink - Adding suscribtion for {guild_id}")
     allay.Database.query(
         "INSERT INTO nextink_subscriptions (guild_id, channel_id) VALUES (?, ?)",
         (guild_id, channel_id)
@@ -226,7 +225,7 @@ async def add_suscribtion(guild_id: int, channel_id: int):
 
 
 async def remove_suscribtion(guild_id: int, channel_id: int):
-    logs.info(f"Removing suscribtion for {guild_id}")
+    logs.info(f"Next.ink - Removing suscribtion for {guild_id}")
     allay.Database.query(
         "DELETE FROM nextink_subscriptions WHERE guild_id = ? AND channel_id = ?",
         (guild_id, channel_id)
@@ -241,7 +240,7 @@ async def get_last_run() -> int:
 
 
 async def set_last_run(value: int):
-    logs.info(f"Setting 'last_run' system key to {value}")
+    logs.info(f"Next.ink - Setting 'last_run' system key to {value}")
     allay.Database.query(
         "UPDATE nextink_system SET value = ? WHERE key = 'last_run'",
         (value,)
