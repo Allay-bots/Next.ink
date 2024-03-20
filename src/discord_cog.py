@@ -169,7 +169,6 @@ class NiCog(commands.Cog):
             return
 
         subscriptions = await get_all_subscriptions()
-        print(subscriptions)
         for subscription in subscriptions:
             silence_mode = await get_silence_mode(subscription["guild_id"], subscription["channel_id"])
             silence = True if (silence_mode == SILENT.ALL) else False
@@ -194,7 +193,6 @@ class NiCog(commands.Cog):
                 )
             )
             for embed in embeds:
-                print(silence)
                 await webhook.send(
                     avatar_url=feed.feed.image.href,
                     embed=embed,
@@ -244,7 +242,6 @@ async def get_silence_mode(guild_id: int, channel_id: int):
         "SELECT silent FROM nextink_subscriptions WHERE guild_id = ? AND channel_id = ?",
         (guild_id, channel_id)
     )
-    print(result[0]["silent"] if len(result) == 1 else SILENT.NONE)
     return result[0]["silent"] if len(result) == 1 else SILENT.NONE
 
 
