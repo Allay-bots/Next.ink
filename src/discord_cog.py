@@ -135,7 +135,8 @@ class NiCog(commands.Cog):
             )
         await ctx.response.send_message(embed=embed)
 
-    time = [time(hour=x, minute=0) for x in range(0, 24)]
+    #time = [time(hour=x, minute=0) for x in range(0, 24)]
+    time = [time(hour=10, minute=0)]
 
     @tasks.loop(time=time)
     async def check(self):
