@@ -195,7 +195,7 @@ class NiCog(commands.Cog):
         await self.bot.wait_until_ready()
 
     # Unified send loop: runs hourly; triggers daily batch at 08:00
-    @tasks.loop(time=[time(hour=x, minute=38) for x in range(0, 24)])
+    @tasks.loop(time=[time(hour=x, minute=0) for x in range(0, 24)])
     async def send_loop(self):
         logger.info("Next.ink - Send loop")
         now = datetime.now()
