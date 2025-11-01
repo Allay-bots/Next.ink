@@ -13,7 +13,9 @@ de la licence CeCILL diffusée sur le site "http://www.cecill.info".
 # External libraries
 import discord
 from discord.ext import commands
-from LRFutils import logs
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Project modules
 import allay
@@ -31,5 +33,5 @@ name = "Next.ink"
 # -----
 
 async def setup(bot: allay.Bot):
-    logs.info(f"Loading {icon} {name} v{version}...")
+    logger.info(f"Loading {icon} {name} v{version}...")
     await bot.add_cog(NiCog(bot), icon=icon, display_name=name)
