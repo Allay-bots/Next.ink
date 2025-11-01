@@ -28,6 +28,15 @@ version = "0.0.1"
 icon = "🗞️"
 name = "Next.ink"
 
+# Required intents
+# ----------------
+
+required_intents = [
+    #"presences",
+    #"members",
+    #"message_content"
+]
+
 
 # Setup
 # -----
