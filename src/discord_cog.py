@@ -19,8 +19,10 @@ import allay
 # External libraries
 import discord
 import feedparser
-from LRFutils import logs
+import logging
 from discord.ext import commands, tasks
+
+logger = logging.getLogger(__name__)
 
 
 # Constants
@@ -140,7 +142,7 @@ class NiCog(commands.Cog):
 
     @tasks.loop(time=time)
     async def check(self):
-        logs.info("Next.ink - Checking the feed")
+        logger.info("Next.ink - Checking the feed")
         feed = feedparser.parse("https://next.ink/feed/briefonly")
         last_run = datetime.fromtimestamp(await get_last_run(), timezone.utc)
         embeds = []
@@ -255,7 +257,7 @@ def is_subscribed(guild_id: int, channel_id: int):
 
 
 async def add_subscription(guild_id: int, channel_id: int, silent=SILENT.NONE):
-    logs.info(f"Next.ink - Adding subscription for {guild_id}")
+    logger.info(f"Next.ink - Adding subscription for {guild_id}")
     allay.Database.query(
         "INSERT INTO nextink_subscriptions (guild_id, channel_id, silent) VALUES (?, ?, ?)",
         (guild_id, channel_id, silent)
@@ -263,7 +265,7 @@ async def add_subscription(guild_id: int, channel_id: int, silent=SILENT.NONE):
 
 
 async def remove_subscription(guild_id: int, channel_id: int):
-    logs.info(f"Next.ink - Removing subscription for {guild_id}")
+    logger.info(f"Next.ink - Removing subscription for {guild_id}")
     allay.Database.query(
         "DELETE FROM nextink_subscriptions WHERE guild_id = ? AND channel_id = ?",
         (guild_id, channel_id)
@@ -278,7 +280,7 @@ async def get_last_run() -> int:
 
 
 async def set_last_run(value: int):
-    logs.info(f"Next.ink - Setting 'last_run' system key to {value}")
+    logger.info(f"Next.ink - Setting 'last_run' system key to {value}")
     allay.Database.query(
         "UPDATE nextink_system SET value = ? WHERE key = 'last_run'",
         (value,)
