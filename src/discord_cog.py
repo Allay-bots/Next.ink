@@ -157,7 +157,7 @@ class NiCog(commands.Cog):
                 url=entry.link
             )
             embed.set_footer(
-                text="#LeBrief - Next.ink"
+                text="Next.ink"
             )
 
             img_regex = r'\bhttps?://\S+?\.(?:jpg|png|gif)\b'
@@ -189,7 +189,7 @@ class NiCog(commands.Cog):
                 continue
 
             webhook = await channel.create_webhook(
-                name="#LeBrief - Next.ink",
+                name="Next.ink",
                 reason=allay.I18N.tr(
                     channel,
                     "nextink.webhook.reason",

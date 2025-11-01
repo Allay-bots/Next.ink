@@ -5,15 +5,15 @@
 
 en:
   nextink:
-    already_subscribed: "This channel is already subscribed to #LeBrief by Next.ink"
-    not_subscribed: "This channel is not subscribed to #LeBrief by Next.ink"
-    subscribed: "Successfully subscribed this channel to #LeBrief by Next.ink"
-    unsubscribed: "Successfully unsubscribed this channel from #LeBrief by Next.ink"
+    already_subscribed: "This channel is already subscribed to articles by Next.ink"
+    not_subscribed: "This channel is not subscribed to articles by Next.ink"
+    subscribed: "Successfully subscribed this channel to articles by Next.ink"
+    unsubscribed: "Successfully unsubscribed this channel from articles by Next.ink"
     list:
       title: "Subscribed channels"
-      empty: "No channel is subscribed to #LeBrief by Next.ink on this server"
+      empty: "No channel is subscribed to articles by Next.ink on this server"
     webhook:
-      reason: "Send daily #LeBrief message"
+      reason: "Send Next.ink articles"
     notifications:
       all: "**Messages** : non-silent"
       first: "**Messages** : first is silent"
