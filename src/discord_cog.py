@@ -68,9 +68,9 @@ class NiCog(commands.Cog):
         )
     @discord.app_commands.choices(
             silent=[
-                discord.app_commands.Choice(name="Send all messages as silent", value=SILENT.NONE),
+                discord.app_commands.Choice(name="Send all messages as silent", value=SILENT.ALL),
                 discord.app_commands.Choice(name="Send only first message with notification", value=SILENT.FIRST),
-                discord.app_commands.Choice(name="Send all messages with notification", value=SILENT.ALL)
+                discord.app_commands.Choice(name="Send all messages with notification", value=SILENT.NONE)
             ],
             frequency=[
                 discord.app_commands.Choice(name="Real-time", value=FREQUENCY.REALTIME),

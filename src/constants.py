@@ -9,9 +9,9 @@ de la licence CeCILL diffusée sur le site "http://www.cecill.info".
 # ---------
 
 class SILENT:
-    ALL = 2
+    ALL = 0
     FIRST = 1
-    NONE = 0
+    NONE = 2
 
 
 class FREQUENCY:
