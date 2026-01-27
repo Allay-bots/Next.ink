@@ -56,22 +56,24 @@ async def send_to_frequency(bot, embeds: list, frequency: int):
         channel = bot.get_channel(int(subscription["channel_id"]))
         if not channel:
             continue
-        # If no manage_webhooks permission, send directly in channel
-        if not channel.permissions_for(channel.guild.me).manage_webhooks:
+        # First, try to use a temporary webhook
+        try:
+            webhook = await channel.create_webhook(
+                name="Next.ink",
+                reason=allay.I18N.tr(channel, "nextink.webhook.reason")
+            )
+            try:
+                for embed in embeds:
+                    await webhook.send(avatar_url="https://next.ink/wp-content/uploads/2023/11/favicon-150x150.png", embed=embed, silent=silence)
+                    embeds.remove(embed)
+                    if silence_mode == SILENT.FIRST:
+                        silence = True
+            finally:
+                await webhook.delete()
+        # If impossible, send using the bot account
+        except (discord.HTTPException, discord.DiscordException) as e:
             for embed in embeds:
                 await channel.send(embed=embed, silent=silence)
+                embeds.remove(embed)
                 if silence_mode == SILENT.FIRST:
                     silence = True
-            continue
-        # Use a temporary webhook
-        webhook = await channel.create_webhook(
-            name="Next.ink",
-            reason=allay.I18N.tr(channel, "nextink.webhook.reason")
-        )
-        try:
-            for embed in embeds:
-                await webhook.send(avatar_url="https://next.ink/wp-content/uploads/2023/11/favicon-150x150.png", embed=embed, silent=silence)
-                if silence_mode == SILENT.FIRST:
-                    silence = True
-        finally:
-            await webhook.delete()
