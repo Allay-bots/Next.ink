@@ -51,6 +51,7 @@ async def send_to_frequency(bot, embeds: list, frequency: int):
     subscriptions = await get_all_subscriptions()
     targets = [s for s in subscriptions if int(s.get('frequency', FREQUENCY.REALTIME)) == frequency]
     for subscription in targets:
+        sembeds = embeds.copy()
         silence_mode = subscription['silent']
         silence = True if (silence_mode == SILENT.ALL) else False
         channel = bot.get_channel(int(subscription["channel_id"]))
@@ -63,17 +64,20 @@ async def send_to_frequency(bot, embeds: list, frequency: int):
                 reason=allay.I18N.tr(channel, "nextink.webhook.reason")
             )
             try:
-                for embed in embeds:
+                for embed in sembeds:
                     await webhook.send(avatar_url="https://next.ink/wp-content/uploads/2023/11/favicon-150x150.png", embed=embed, silent=silence)
-                    embeds.remove(embed)
+                    sembeds.remove(embed)
                     if silence_mode == SILENT.FIRST:
                         silence = True
+            except Exception as e:
+                logger.error("Error when trying to send through webhook to %s", bot.get_guild(int(subscription["guild_id"])).name, exc_info=e)
             finally:
                 await webhook.delete()
         # If impossible, send using the bot account
         except (discord.HTTPException, discord.DiscordException) as e:
-            for embed in embeds:
+            logger.error("Error when trying to send through bot account to %s", bot.get_guild(int(subscription["guild_id"])).name, exc_info=e)
+            for embed in sembeds:
                 await channel.send(embed=embed, silent=silence)
-                embeds.remove(embed)
+                sembeds.remove(embed)
                 if silence_mode == SILENT.FIRST:
                     silence = True
