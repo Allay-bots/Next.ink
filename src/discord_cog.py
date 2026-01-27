@@ -168,6 +168,7 @@ class NiCog(commands.Cog):
         feed = feedparser.parse("https://next.ink/feed/full")
         last_fetch_ts = await get_system_int('last_fetch')
         now_ts = int(datetime.now().timestamp())
+        new_article = False
         for entry in feed.entries:
             logger.debug("Looking at article : {}".format(entry.title))
             published_ts = int(mktime(entry.published_parsed)) if hasattr(entry, 'published_parsed') and entry.published_parsed else now_ts
@@ -185,10 +186,12 @@ class NiCog(commands.Cog):
             except Exception:
                 pass
             await queue_article(article_id, entry.title, entry.link, img_url, published_ts, now_ts)
+            new_article = True
         # Send a batch for realtime
         await send_batch(self.bot, last_fetch_ts, now_ts, FREQUENCY.REALTIME)
         # Update last_fetch
-        await set_system('last_fetch', str(now_ts))
+        if new_article:
+            await set_system('last_fetch', str(now_ts))
 
     @fetch_loop.before_loop
     async def before_fetch(self):
