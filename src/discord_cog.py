@@ -194,7 +194,7 @@ class NiCog(commands.Cog):
     async def before_fetch(self):
         await self.bot.wait_until_ready()
 
-    # Unified send loop: runs hourly; triggers daily batch at 08:00
+    # Unified send loop: runs hourly; triggers daily batch at 09:00
     @tasks.loop(time=[time(hour=x, minute=0) for x in range(0, 24)])
     async def send_loop(self):
         logger.info("Next.ink - Send loop")
@@ -207,8 +207,8 @@ class NiCog(commands.Cog):
         await send_batch(self.bot, last_hourly, now_ts, FREQUENCY.HOURLY)
         await set_system('last_send_hourly', str(now_ts))
 
-        # Daily batch if it's 08:00
-        if now.hour == 17:
+        # Daily batch
+        if now.hour == 9:
             logger.debug("Running daily batch")
             last_daily = await get_system_int('last_send_daily')
             await send_batch(self.bot, last_daily, now_ts, FREQUENCY.DAILY)
