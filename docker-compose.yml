@@ -1,0 +1,15 @@
+services:
+  next-ink:
+    build:
+      context: .
+      # Branch, tag or commit SHA of Allay-bots/Core to build against.
+      args:
+        CORE_REF: main
+    restart: unless-stopped
+    environment:
+      ALLAY_CORE_TOKEN: ${ALLAY_CORE_TOKEN:?Set ALLAY_CORE_TOKEN in your .env file}
+    volumes:
+      - next-ink-data:/app/data
+
+volumes:
+  next-ink-data:
