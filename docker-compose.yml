@@ -5,6 +5,7 @@ services:
       # Branch, tag or commit SHA of Allay-bots/Core to build against.
       args:
         CORE_REF: main
+    pull_policy: build
     restart: unless-stopped
     environment:
       ALLAY_CORE_TOKEN: ${ALLAY_CORE_TOKEN:?Set ALLAY_CORE_TOKEN in your .env file}
